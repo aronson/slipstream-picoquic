@@ -1617,7 +1617,7 @@ int picoquic_create_path(picoquic_cnx_t* cnx, uint64_t start_time, const struct 
             picoquic_pacing_init(&path_x->pacing, start_time);
 
             /* Initialize the MTU */
-            path_x->send_mtu = (peer_addr == NULL || peer_addr->sa_family == AF_INET) ? PICOQUIC_INITIAL_MTU_IPV4 : PICOQUIC_INITIAL_MTU_IPV6;
+            picoquic_reset_path_mtu(path_x);
 
             /* initialize the quality reporting thresholds */
             path_x->rtt_update_delta = cnx->rtt_update_delta;
@@ -2477,8 +2477,20 @@ void picoquic_update_peer_addr(picoquic_path_t* path_x, const struct sockaddr* p
 void picoquic_reset_path_mtu(picoquic_path_t* path_x)
 {
     /* Re-initialize the MTU */
-    path_x->send_mtu = (path_x->peer_addr.ss_family == 0 || path_x->peer_addr.ss_family == AF_INET) ?
-        PICOQUIC_INITIAL_MTU_IPV4 : PICOQUIC_INITIAL_MTU_IPV6;
+    picoquic_quic_t* quic = path_x->cnx->quic;
+    int is_ipv4 = path_x->peer_addr.ss_family == 0 || path_x->peer_addr.ss_family == AF_INET;
+    if (is_ipv4 && quic->initial_send_mtu_ipv4 > 0) {
+        path_x->send_mtu = quic->initial_send_mtu_ipv4;
+    } else if (!is_ipv4 && quic->initial_send_mtu_ipv6 > 0) {
+        path_x->send_mtu = quic->initial_send_mtu_ipv6;
+    } else {
+        path_x->send_mtu = (is_ipv4) ? PICOQUIC_INITIAL_MTU_IPV4 : PICOQUIC_INITIAL_MTU_IPV6;
+    }
+
+    if (path_x->send_mtu > quic->mtu_max) {
+        DBG_PRINTF("path MTU too large: send_mtu %d > mtu_max\n", path_x->send_mtu, quic->mtu_max);
+    }
+
     /* Reset the MTU discovery context */
     path_x->send_mtu_max_tried = 0;
     path_x->mtu_probe_sent = 0;
@@ -4257,6 +4269,12 @@ void picoquic_set_mtu_max(picoquic_quic_t* quic, uint32_t mtu_max)
 {
     quic->mtu_max = mtu_max;
     quic->default_tp.max_packet_size = mtu_max;
+}
+
+void picoquic_set_initial_send_mtu(picoquic_quic_t* quic, uint32_t intitial_mtu_ipv4, uint32_t intitial_mtu_ipv6)
+{
+    quic->initial_send_mtu_ipv4 = intitial_mtu_ipv4;
+    quic->initial_send_mtu_ipv6 = intitial_mtu_ipv6;
 }
 
 void picoquic_set_alpn_select_fn(picoquic_quic_t* quic, picoquic_alpn_select_fn alpn_select_fn)

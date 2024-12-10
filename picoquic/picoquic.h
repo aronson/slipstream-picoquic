@@ -766,6 +766,7 @@ uint64_t picoquic_get_default_connection_id_ttl(picoquic_quic_t* quic);
 #define PICOQUIC_MTU_OVERHEAD(p_s_addr) (((p_s_addr)->sa_family==AF_INET6)?48:28)
 void picoquic_set_mtu_max(picoquic_quic_t* quic, uint32_t mtu_max);
 
+void picoquic_set_initial_send_mtu(picoquic_quic_t* quic, uint32_t intitial_mtu_ipv4, uint32_t intitial_mtu_ipv6);
 
 /* Set the ALPN function used to verify incoming ALPN */
 void picoquic_set_alpn_select_fn(picoquic_quic_t* quic, picoquic_alpn_select_fn alpn_select_fn);

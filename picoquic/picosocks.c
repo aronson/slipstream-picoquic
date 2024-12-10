@@ -20,6 +20,10 @@
 */
 
 #include "picosocks.h"
+
+#include <assert.h>
+#include <sys/param.h>
+
 #include "picoquic_utils.h"
 
 int picoquic_bind_to_port(SOCKET_TYPE fd, int af, int port)
@@ -1105,6 +1109,15 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     int bytes_sent;
 
     /* Format the message header */
+
+    // calculate segment count
+    if (send_msg_size > 0) {
+        const int segment_count = length / send_msg_size;
+        if (segment_count > 128) {
+            DBG_PRINTF("Segment count %d too large\n", segment_count);
+            return -1;
+        }
+    }
 
     dataBuf.iov_base = (char*)bytes;
     dataBuf.iov_len = length;

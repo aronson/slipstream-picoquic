@@ -694,7 +694,7 @@ int picoquic_receive_transport_extensions(picoquic_cnx_t* cnx, int extension_mod
                     /* The default for this parameter is the maximum permitted UDP payload of 65527. Values below 1200 are invalid. */
                     uint64_t max_packet_size = picoquic_transport_param_varint_decode(cnx, bytes + byte_index, extension_length, &ret);
                     if (ret == 0){
-                        if (max_packet_size < 1200 || max_packet_size > 65527) {
+                        if (max_packet_size < PICOQUIC_ENFORCED_INITIAL_MTU || max_packet_size > 65527) {
                             ret = picoquic_connection_error_ex(cnx, PICOQUIC_TRANSPORT_PARAMETER_ERROR, 0, "Max packet size TP");
                         }
                         else {

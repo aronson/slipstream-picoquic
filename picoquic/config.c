@@ -344,6 +344,20 @@ static int config_set_option(option_table_line_t* option_desc, option_param_t* p
             ret = -1;
         }
         break;
+    case picoquic_option_INITIAL_SEND_MTU_IPV4:
+        config->initial_send_mtu_ipv4 = config_atoi(params, nb_params, 0, &ret);
+        if (config->initial_send_mtu_ipv4 <= 0 || config->initial_send_mtu_ipv4 > PICOQUIC_MAX_PACKET_SIZE) {
+            fprintf(stderr, "Invalid initial send mtu ipv4: %s\n", config_optval_param_string(opval_buffer, 256, params, nb_params, 0));
+            ret = -1;
+        }
+        break;
+    case picoquic_option_INITIAL_SEND_MTU_IPV6:
+        config->initial_send_mtu_ipv6 = config_atoi(params, nb_params, 0, &ret);
+        if (config->initial_send_mtu_ipv6 <= 0 || config->initial_send_mtu_ipv6 > PICOQUIC_MAX_PACKET_SIZE) {
+            fprintf(stderr, "Invalid initial send mtu ipv6: %s\n", config_optval_param_string(opval_buffer, 256, params, nb_params, 0));
+            ret = -1;
+        }
+        break;
     case picoquic_option_SNI:
         ret = config_set_string_param(&config->sni, params, nb_params, 0);
         break;
@@ -813,6 +827,10 @@ picoquic_quic_t* picoquic_create_and_configure(picoquic_quic_config_t* config,
 
         if (config->mtu_max > 0) {
             picoquic_set_mtu_max(quic, config->mtu_max);
+        }
+
+        if (config->initial_send_mtu_ipv4 > 0 || config->initial_send_mtu_ipv6 > 0) {
+            picoquic_set_initial_send_mtu(quic, config->initial_send_mtu_ipv4, config->initial_send_mtu_ipv6);
         }
 
         if (config->cnx_id_length != -1) {

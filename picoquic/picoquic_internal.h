@@ -38,8 +38,8 @@ extern "C" {
 #ifndef PICOQUIC_MAX_PACKET_SIZE
 #define PICOQUIC_MAX_PACKET_SIZE 1536
 #endif
-#define PICOQUIC_MIN_SEGMENT_SIZE 256
-#define PICOQUIC_ENFORCED_INITIAL_MTU 1200
+#define PICOQUIC_MIN_SEGMENT_SIZE 32
+#define PICOQUIC_ENFORCED_INITIAL_MTU 129 /* TODO: MTU */
 #define PICOQUIC_ENFORCED_INITIAL_CID_LENGTH 8
 #define PICOQUIC_PRACTICAL_MAX_MTU 1440
 #define PICOQUIC_RETRY_SECRET_SIZE 64
@@ -622,6 +622,8 @@ typedef struct st_picoquic_quic_t {
     uint8_t default_datagram_priority;
     uint64_t local_cnxid_ttl; /* Max time to live of Connection ID in microsec, init to "forever" */
     uint32_t mtu_max;
+    uint32_t initial_send_mtu_ipv4;
+    uint32_t initial_send_mtu_ipv6;
     uint32_t padding_multiple_default;
     uint32_t padding_minsize_default;
     uint32_t sequence_hole_pseudo_period; /* Optimistic ack defense */

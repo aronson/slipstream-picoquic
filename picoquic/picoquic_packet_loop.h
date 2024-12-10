@@ -120,6 +120,8 @@ typedef struct st_picoquic_packet_loop_options_t {
     unsigned int provide_alt_port : 1; /* Used for simulating multipath or migrations. */
 } picoquic_packet_loop_options_t;
 
+void* picoquic_packet_loop_v3(void* v_ctx);
+
 /* Version 2 of packet loop, works in progress.
 * Parameters are set in a struct, for future
 * extensibility.
@@ -133,6 +135,9 @@ typedef struct st_picoquic_packet_loop_param_t {
     int extra_socket_required;
     int simulate_eio;
     size_t send_length_max;
+    int is_client;
+    ssize_t (*decode)(const unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *from, struct sockaddr_storage *dest);
+    ssize_t (*encode)(unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len);
 } picoquic_packet_loop_param_t;
 
 int picoquic_packet_loop_v2(picoquic_quic_t* quic,
@@ -267,6 +272,8 @@ picoquic_network_thread_ctx_t* picoquic_start_custom_network_thread(
     picoquic_packet_loop_cb_fn loop_callback,
     void* loop_callback_ctx,
     int * ret);
+
+void picoquic_open_network_wake_up(picoquic_network_thread_ctx_t* thread_ctx, int *ret);
 
 /* Implementations of picoquic_custom_thread_create_fn and 
 * picoquic_custom_thread_delete_fn for the native thread types.
