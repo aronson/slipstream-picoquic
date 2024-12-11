@@ -682,10 +682,10 @@ int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
                                 }
 
                                 memcpy(buffer, decoded, bytes_recv);
+                                free(decoded);
                             } else {
                                 DBG_PRINTF("nothing received...", NULL);
                             }
-                            free(decoded);
                         }
                         break;
                     }
@@ -981,11 +981,13 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                                         }
                                     }
 
-                                    free(poll_packet_buf);
+                                    free(encoded);
                                 } else {
                                     DBG_PRINTF("Encoding poll fails, ret=%d\n", encoded_len);
                                     ret = 0;
                                 }
+
+                                free(poll_packet_buf);
                             }
                         }
                     }
@@ -1100,6 +1102,8 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                             sock_ret = picoquic_sendmsg(send_socket,
                                 (struct sockaddr*)&peer_addr, (struct sockaddr*)&local_addr, if_index,
                                 (const char*)encoded, (int)encoded_len, (int)send_msg_size, &sock_err);
+
+                            free(encoded);
                         } else {
                             sock_ret = picoquic_sendmsg(send_socket,
                                 (struct sockaddr*)&peer_addr, (struct sockaddr*)&local_addr, if_index,
