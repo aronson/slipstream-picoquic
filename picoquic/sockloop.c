@@ -935,8 +935,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                     picoquic_path_t* last_path = last_cnx->path[0];
                     size_t short_header_conn_id_len = last_path->p_remote_cnxid->cnx_id.id_len;
                     int slipstream_ret = slipstream_packet_parse(received_buffer, bytes_recv, short_header_conn_id_len, &incoming_src_connection_id, &incoming_dest_connection_id, &is_poll_packet);
-                    if (slipstream_ret == 0 && !is_poll_packet && incoming_src_connection_id.id_len == 0) {
-                        // we only send polls back when receiving short header packets
+                    if (slipstream_ret == 0 && !is_poll_packet) {
                         int poll_ratio = 2;
                         for (int j = 0; j < poll_ratio; ++j) {
                             // get active destination connection id on this ctx
