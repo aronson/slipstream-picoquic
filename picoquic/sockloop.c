@@ -936,58 +936,60 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                     size_t short_header_conn_id_len = last_path->p_remote_cnxid->cnx_id.id_len;
                     int slipstream_ret = slipstream_packet_parse(received_buffer, bytes_recv, short_header_conn_id_len, &incoming_src_connection_id, &incoming_dest_connection_id, &is_poll_packet);
                     if (slipstream_ret == 0 && !is_poll_packet) {
-                        int poll_ratio = 2;
-                        for (int j = 0; j < poll_ratio; ++j) {
+                        // Find socket
+                        SOCKET_TYPE send_socket = INVALID_SOCKET;
+                        struct sockaddr_storage peer_addr = last_path->peer_addr;
+                        struct sockaddr_storage local_addr = last_path->local_addr;
+                        uint16_t send_port = (peer_addr.ss_family == AF_INET) ?
+                            ((struct sockaddr_in*)&local_addr)->sin_port :
+                            ((struct sockaddr_in6*)&local_addr)->sin6_port;
+
+                        /* TODO: verify htons/ntohs */
+                        for (int i = 0; i < nb_sockets_available; i++) {
+                            if (s_ctx[i].af == peer_addr.ss_family) {
+                                send_socket = s_ctx[i].fd;
+                                if (send_port != 0 && htons(s_ctx[i].port) == send_port)
+                                    break;
+                            }
+                        }
+
+                        if (send_socket != INVALID_SOCKET) {
                             // get active destination connection id on this ctx
                             picoquic_connection_id_t outgoing_dest_connection_id = last_path->p_remote_cnxid->cnx_id;
                             if (outgoing_dest_connection_id.id_len != PICOQUIC_SHORT_HEADER_CONNECTION_ID_SIZE) {
-                                DBG_PRINTF("outgoing != defaul %d %d", outgoing_dest_connection_id.id_len, PICOQUIC_SHORT_HEADER_CONNECTION_ID_SIZE);
+                                DBG_PRINTF("outgoing != default %d %d", outgoing_dest_connection_id.id_len, PICOQUIC_SHORT_HEADER_CONNECTION_ID_SIZE);
                             }
-                            uint8_t *poll_packet_buf;
-                            size_t poll_packet_len;
-                            slipstream_ret = slipstream_packet_create_poll(&poll_packet_buf, &poll_packet_len, outgoing_dest_connection_id);
-                            if (slipstream_ret >= 0) {
-                                unsigned char* encoded;
-                                ssize_t encoded_len = param->encode(&encoded, poll_packet_buf, poll_packet_len, &poll_packet_len);
-                                if (encoded_len > 0) {
-                                    // Find socket
-                                    SOCKET_TYPE send_socket = INVALID_SOCKET;
-                                    struct sockaddr_storage peer_addr = last_path->peer_addr;
-                                    uint16_t send_port = (peer_addr.ss_family == AF_INET) ?
-                                        ((struct sockaddr_in*)&addr_to)->sin_port :
-                                        ((struct sockaddr_in6*)&addr_to)->sin6_port;
 
-                                    bytes_sent += send_length;
+                            int poll_ratio = 2;
+                            for (int j = 0; j < poll_ratio; ++j) {
+                                uint8_t *poll_packet_buf;
+                                size_t poll_packet_len;
+                                slipstream_ret = slipstream_packet_create_poll(&poll_packet_buf, &poll_packet_len, outgoing_dest_connection_id);
+                                if (slipstream_ret >= 0) {
+                                    unsigned char* encoded;
+                                    ssize_t encoded_len = param->encode(&encoded, poll_packet_buf, poll_packet_len, &poll_packet_len);
+                                    if (encoded_len > 0) {
+                                        /* TODO: set send_msg_size according to the encoded length */
 
-                                    /* TODO: verify htons/ntohs */
-                                    for (int i = 0; i < nb_sockets_available; i++) {
-                                        if (s_ctx[i].af == peer_addr.ss_family) {
-                                            send_socket = s_ctx[i].fd;
-                                            if (send_port != 0 && htons(s_ctx[i].port) == send_port)
-                                                break;
-                                        }
-                                    }
-
-                                    /* TODO: set send_msg_size according to the encoded length */
-
-                                    if (send_socket != INVALID_SOCKET) {
                                         int sock_err = 0;
                                         slipstream_ret = picoquic_sendmsg(send_socket,
-                                        (struct sockaddr*)&peer_addr, (struct sockaddr*)&addr_from, param->dest_if,
+                                        (struct sockaddr*)&peer_addr, (struct sockaddr*)&local_addr, param->dest_if,
                                         (const char*)encoded, encoded_len, (int)send_msg_size, &sock_err);
                                         if (slipstream_ret < 0) {
-                                            DBG_PRINTF("Error sending poll packet, ret=%d, sock_err=%d\n", slipstream_ret, sock_err);
+                                            DBG_PRINTF("Error sending poll packet, ret=%d, sock_err=%d %s\n", slipstream_ret, sock_err, strerror(sock_err));
                                         }
+
+                                        free(encoded);
+                                    } else {
+                                        DBG_PRINTF("Encoding poll fails, ret=%d\n", encoded_len);
+                                        ret = 0;
                                     }
 
-                                    free(encoded);
-                                } else {
-                                    DBG_PRINTF("Encoding poll fails, ret=%d\n", encoded_len);
-                                    ret = 0;
+                                    free(poll_packet_buf);
                                 }
-
-                                free(poll_packet_buf);
                             }
+                        } else {
+                            DBG_PRINTF("no valid socket found for poll packet", NULL);
                         }
                     }
                 }
