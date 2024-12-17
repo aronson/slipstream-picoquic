@@ -1647,6 +1647,9 @@ uint64_t picoquic_get_pacing_rate(picoquic_cnx_t* cnx);
 uint64_t picoquic_get_cwin(picoquic_cnx_t* cnx);
 uint64_t picoquic_get_rtt(picoquic_cnx_t* cnx);
 
+/* Connection context retrieval functions */
+picoquic_cnx_t* picoquic_cnx_by_id_(picoquic_quic_t* quic, picoquic_connection_id_t cnx_id);
+
 /* List of ALPN types used in session negotiation */
 
 typedef enum {

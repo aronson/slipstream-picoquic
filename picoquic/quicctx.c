@@ -4733,6 +4733,10 @@ void picoquic_set_rejected_version(picoquic_cnx_t* cnx, uint32_t rejected_versio
 }
 
 /* Context retrieval functions */
+picoquic_cnx_t* picoquic_cnx_by_id_(picoquic_quic_t* quic, picoquic_connection_id_t cnx_id) {
+    return picoquic_cnx_by_id(quic, cnx_id, NULL);
+}
+
 picoquic_cnx_t* picoquic_cnx_by_id(picoquic_quic_t* quic, picoquic_connection_id_t cnx_id,
     struct st_picoquic_local_cnxid_t** l_cid)
 {

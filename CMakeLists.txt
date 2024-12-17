@@ -105,6 +105,7 @@ set(PICOQUIC_LIBRARY_FILES
     picoquic/sacks.c
     picoquic/sender.c
     picoquic/sim_link.c
+    picoquic/slipstream_packet.c
     picoquic/slipstream_packet.h
     picoquic/sockloop.c
     picoquic/spinbit.c

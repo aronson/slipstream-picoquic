@@ -579,9 +579,7 @@ int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
     int * is_wake_up_event,
     picoquic_network_thread_ctx_t * thread_ctx,
     int * socket_rank,
-    ssize_t (*decode)(const unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *from, struct sockaddr_storage *dest),
-    bool is_client
-    )
+    ssize_t (*decode)(picoquic_quic_t* quic, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr))
 {
     fd_set readfds;
     struct timeval tv;
@@ -668,23 +666,10 @@ int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
 
                         if (decode != NULL) {
                             unsigned char *decoded;
-                            bytes_recv = decode((const unsigned char**)&decoded, (const unsigned char*)buffer, bytes_recv, addr_from, addr_dest);
+                            bytes_recv = decode(thread_ctx->quic, &decoded, (const unsigned char*)buffer, bytes_recv, addr_from);
                             if (bytes_recv > 0) {
-                                if (!is_client) {
-                                    // Check if this could possibly be a poll packet
-                                    picoquic_connection_id_t incoming_src_connection_id = {0};
-                                    picoquic_connection_id_t incoming_dest_connection_id; // sure to be set by parser
-                                    bool is_poll_packet = false;
-                                    int slipstream_ret = slipstream_packet_parse(decoded, bytes_recv, PICOQUIC_SHORT_HEADER_CONNECTION_ID_SIZE, &incoming_src_connection_id, &incoming_dest_connection_id, &is_poll_packet);
-                                    if (slipstream_ret == 0 && is_poll_packet) {
-                                        bytes_recv = 0;
-                                    }
-                                }
-
                                 memcpy(buffer, decoded, bytes_recv);
                                 free(decoded);
-                            } else {
-                                DBG_PRINTF("nothing received...", NULL);
                             }
                         }
                         break;
@@ -875,7 +860,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
             &addr_to, &if_index_to, &received_ecn,
             buffer, sizeof(buffer),
             delta_t, &is_wake_up_event, thread_ctx, &socket_rank,
-            param->decode, param->is_client);
+            param->decode);
         received_buffer = buffer;
 #endif
         current_time = picoquic_current_time();
@@ -967,7 +952,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                                 slipstream_ret = slipstream_packet_create_poll(&poll_packet_buf, &poll_packet_len, outgoing_dest_connection_id);
                                 if (slipstream_ret >= 0) {
                                     unsigned char* encoded;
-                                    ssize_t encoded_len = param->encode(&encoded, poll_packet_buf, poll_packet_len, &poll_packet_len);
+                                    ssize_t encoded_len = param->encode(thread_ctx->quic, last_cnx, &encoded, poll_packet_buf, poll_packet_len, &poll_packet_len, &peer_addr);
                                     if (encoded_len > 0) {
                                         /* TODO: set send_msg_size according to the encoded length */
 
@@ -1088,7 +1073,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                         if (param->encode != NULL) {
                             unsigned char* encoded;
                             size_t segment_len = send_msg_size == 0 ? send_length : send_msg_size;
-                            ssize_t encoded_len = param->encode(&encoded, (const unsigned char*)send_buffer, send_length, &segment_len);
+                            ssize_t encoded_len = param->encode(thread_ctx->quic, last_cnx, &encoded, (const unsigned char*)send_buffer, send_length, &segment_len, &peer_addr);
                             if (encoded_len <= 0) {
                                 DBG_PRINTF("Encoding fails, ret=%d\n", encoded_len);
                                 // continue (consider it as packed dropped)

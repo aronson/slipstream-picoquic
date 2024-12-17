@@ -136,8 +136,8 @@ typedef struct st_picoquic_packet_loop_param_t {
     int simulate_eio;
     size_t send_length_max;
     int is_client;
-    ssize_t (*decode)(const unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *from, struct sockaddr_storage *dest);
-    ssize_t (*encode)(unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len);
+    ssize_t (*decode)(picoquic_quic_t* quic, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr);
+    ssize_t (*encode)(picoquic_quic_t* quic, picoquic_cnx_t* last_cnx, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len, struct sockaddr_storage *peer_addr);
 } picoquic_packet_loop_param_t;
 
 int picoquic_packet_loop_v2(picoquic_quic_t* quic,
