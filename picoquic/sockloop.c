@@ -103,14 +103,11 @@
 #endif
 #endif
 
-#include <stdbool.h>
-
 #include "picosocks.h"
 #include "picoquic.h"
 #include "picoquic_internal.h"
 #include "picoquic_packet_loop.h"
 #include "picoquic_unified_log.h"
-#include "slipstream_packet.h"
 
 #if defined(_WINDOWS)
 #ifdef UDP_SEND_MSG_SIZE
@@ -325,6 +322,24 @@ int picoquic_win_recvmsg_async_finish(
 }
 
 #endif
+
+
+SOCKET_TYPE picoquic_socket_get_send_socket(picoquic_socket_ctx_t* s_ctx, size_t s_ctx_len, const struct sockaddr_storage* peer_addr, const struct sockaddr_storage* local_addr) {
+    SOCKET_TYPE send_socket = INVALID_SOCKET;
+    const uint16_t send_port = (peer_addr->ss_family == AF_INET) ?
+        ((struct sockaddr_in*)local_addr)->sin_port :
+        ((struct sockaddr_in6*)local_addr)->sin6_port;
+
+    for (int i = 0; i < s_ctx_len; i++) {
+        if (s_ctx[i].af == peer_addr->ss_family) {
+            send_socket = s_ctx[i].fd;
+            if (send_port != 0 && htons(s_ctx[i].port) == send_port)
+                break;
+        }
+    }
+
+    return send_socket;
+}
 
 void picoquic_packet_loop_close_socket(picoquic_socket_ctx_t* s_ctx)
 {
@@ -579,7 +594,7 @@ int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
     int * is_wake_up_event,
     picoquic_network_thread_ctx_t * thread_ctx,
     int * socket_rank,
-    ssize_t (*decode)(picoquic_quic_t* quic, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr))
+    ssize_t (*decode)(picoquic_quic_t* quic, picoquic_socket_ctx_t* s_ctx, size_t s_ctx_len, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr))
 {
     fd_set readfds;
     struct timeval tv;
@@ -666,10 +681,13 @@ int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
 
                         if (decode != NULL) {
                             unsigned char *decoded;
-                            bytes_recv = decode(thread_ctx->quic, &decoded, (const unsigned char*)buffer, bytes_recv, addr_from);
+                            bytes_recv = decode(thread_ctx->quic, s_ctx, nb_sockets, &decoded, (const unsigned char*)buffer, bytes_recv, addr_from, addr_dest);
                             if (bytes_recv > 0) {
                                 memcpy(buffer, decoded, bytes_recv);
                                 free(decoded);
+                            } else if (bytes_recv < 0) {
+                                DBG_PRINTF("decode() failed with error %d\n", bytes_recv);
+                                bytes_recv = 0;
                             }
                         }
                         break;
@@ -873,12 +891,11 @@ void* picoquic_packet_loop_v3(void* v_ctx)
         if (bytes_recv < 0) {
             /* The interrupt error is expected if the loop is closing. */
             ret = (thread_ctx->thread_should_close) ? PICOQUIC_NO_ERROR_TERMINATE_PACKET_LOOP : -1;
-            continue;
         }
         else if (bytes_recv == 0 && is_wake_up_event) {
             ret = loop_callback(quic, picoquic_packet_loop_wake_up, loop_callback_ctx, NULL);
         }
-        if (1) {
+        else {
             uint64_t loop_time = current_time;
             size_t bytes_sent = 0;
             size_t nb_packets_sent = 0;
@@ -911,73 +928,6 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                     (struct sockaddr*)&addr_to, if_index_to, received_ecn,
                     &last_cnx, current_time);
 #endif
-
-                if (param->encode != NULL && param->is_client && !slipstream_packet_is_long_header(received_buffer[0])) {
-                    // the client should always respond with a pull for more data
-                    picoquic_connection_id_t incoming_src_connection_id = {0};
-                    picoquic_connection_id_t incoming_dest_connection_id; // sure to be set by parser
-                    bool is_poll_packet = false;
-                    picoquic_path_t* last_path = last_cnx->path[0];
-                    size_t short_header_conn_id_len = last_path->p_remote_cnxid->cnx_id.id_len;
-                    int slipstream_ret = slipstream_packet_parse(received_buffer, bytes_recv, short_header_conn_id_len, &incoming_src_connection_id, &incoming_dest_connection_id, &is_poll_packet);
-                    if (slipstream_ret == 0 && !is_poll_packet) {
-                        // Find socket
-                        SOCKET_TYPE send_socket = INVALID_SOCKET;
-                        struct sockaddr_storage peer_addr = last_path->peer_addr;
-                        struct sockaddr_storage local_addr = last_path->local_addr;
-                        uint16_t send_port = (peer_addr.ss_family == AF_INET) ?
-                            ((struct sockaddr_in*)&local_addr)->sin_port :
-                            ((struct sockaddr_in6*)&local_addr)->sin6_port;
-
-                        /* TODO: verify htons/ntohs */
-                        for (int i = 0; i < nb_sockets_available; i++) {
-                            if (s_ctx[i].af == peer_addr.ss_family) {
-                                send_socket = s_ctx[i].fd;
-                                if (send_port != 0 && htons(s_ctx[i].port) == send_port)
-                                    break;
-                            }
-                        }
-
-                        if (send_socket != INVALID_SOCKET) {
-                            // get active destination connection id on this ctx
-                            picoquic_connection_id_t outgoing_dest_connection_id = last_path->p_remote_cnxid->cnx_id;
-                            if (outgoing_dest_connection_id.id_len != PICOQUIC_SHORT_HEADER_CONNECTION_ID_SIZE) {
-                                DBG_PRINTF("outgoing != default %d %d", outgoing_dest_connection_id.id_len, PICOQUIC_SHORT_HEADER_CONNECTION_ID_SIZE);
-                            }
-
-                            int poll_ratio = 2;
-                            for (int j = 0; j < poll_ratio; ++j) {
-                                uint8_t *poll_packet_buf;
-                                size_t poll_packet_len;
-                                slipstream_ret = slipstream_packet_create_poll(&poll_packet_buf, &poll_packet_len, outgoing_dest_connection_id);
-                                if (slipstream_ret >= 0) {
-                                    unsigned char* encoded;
-                                    ssize_t encoded_len = param->encode(thread_ctx->quic, last_cnx, &encoded, poll_packet_buf, poll_packet_len, &poll_packet_len, &peer_addr);
-                                    if (encoded_len > 0) {
-                                        /* TODO: set send_msg_size according to the encoded length */
-
-                                        int sock_err = 0;
-                                        slipstream_ret = picoquic_sendmsg(send_socket,
-                                        (struct sockaddr*)&peer_addr, (struct sockaddr*)&local_addr, param->dest_if,
-                                        (const char*)encoded, encoded_len, (int)send_msg_size, &sock_err);
-                                        if (slipstream_ret < 0) {
-                                            DBG_PRINTF("Error sending poll packet, ret=%d, sock_err=%d %s\n", slipstream_ret, sock_err, strerror(sock_err));
-                                        }
-
-                                        free(encoded);
-                                    } else {
-                                        DBG_PRINTF("Encoding poll fails, ret=%d\n", encoded_len);
-                                        ret = 0;
-                                    }
-
-                                    free(poll_packet_buf);
-                                }
-                            }
-                        } else {
-                            DBG_PRINTF("no valid socket found for poll packet", NULL);
-                        }
-                    }
-                }
 
 
                 if (loop_callback != NULL) {
