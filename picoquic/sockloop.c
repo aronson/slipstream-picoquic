@@ -324,7 +324,7 @@ int picoquic_win_recvmsg_async_finish(
 #endif
 
 
-SOCKET_TYPE picoquic_socket_get_send_socket(picoquic_socket_ctx_t* s_ctx, size_t s_ctx_len, const struct sockaddr_storage* peer_addr, const struct sockaddr_storage* local_addr) {
+SOCKET_TYPE picoquic_socket_get_send_socket(const picoquic_socket_ctx_t* s_ctx, const size_t s_ctx_len, const struct sockaddr_storage* peer_addr, const struct sockaddr_storage* local_addr) {
     SOCKET_TYPE send_socket = INVALID_SOCKET;
     const uint16_t send_port = (peer_addr->ss_family == AF_INET) ?
         ((struct sockaddr_in*)local_addr)->sin_port :
@@ -758,6 +758,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
     int bytes_recv;
     picoquic_connection_id_t log_cid;
     picoquic_socket_ctx_t s_ctx[4];
+    picoquic_socket_ctxs_t s_ctxs;
     int nb_sockets = 0;
     int nb_sockets_available = 0;
     picoquic_cnx_t* last_cnx = NULL;
@@ -806,6 +807,9 @@ void* picoquic_packet_loop_v3(void* v_ctx)
 
     if (ret == 0) {
         nb_sockets_available = nb_sockets;
+
+        s_ctxs.s_ctx = s_ctx;
+        s_ctxs.len = nb_sockets;
 
         if (udp_gso_available && !param->do_not_use_gso) {
             send_buffer_size = 0xFFFF;
@@ -879,6 +883,11 @@ void* picoquic_packet_loop_v3(void* v_ctx)
             buffer, sizeof(buffer),
             delta_t, &is_wake_up_event, thread_ctx, &socket_rank,
             param->decode);
+
+        if (!loop_immediate) {
+            ret = loop_callback(quic, picoquic_packet_loop_after_select, loop_callback_ctx, (void*)&s_ctxs);
+        }
+
         received_buffer = buffer;
 #endif
         current_time = picoquic_current_time();
@@ -1023,7 +1032,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                         if (param->encode != NULL) {
                             unsigned char* encoded;
                             size_t segment_len = send_msg_size == 0 ? send_length : send_msg_size;
-                            ssize_t encoded_len = param->encode(thread_ctx->quic, last_cnx, &encoded, (const unsigned char*)send_buffer, send_length, &segment_len, &peer_addr);
+                            ssize_t encoded_len = param->encode(thread_ctx->quic, last_cnx, s_ctx, nb_sockets, &encoded, (const unsigned char*)send_buffer, send_length, &segment_len, &peer_addr, &local_addr);
                             if (encoded_len <= 0) {
                                 DBG_PRINTF("Encoding fails, ret=%d\n", encoded_len);
                                 // continue (consider it as packed dropped)
