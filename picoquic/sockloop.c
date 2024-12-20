@@ -324,16 +324,16 @@ int picoquic_win_recvmsg_async_finish(
 #endif
 
 
-SOCKET_TYPE picoquic_socket_get_send_socket(const picoquic_socket_ctx_t* s_ctx, const size_t s_ctx_len, const struct sockaddr_storage* peer_addr, const struct sockaddr_storage* local_addr) {
+SOCKET_TYPE picoquic_socket_get_send_socket(const picoquic_socket_ctxs_t* s_ctxs, const struct sockaddr_storage* peer_addr, const struct sockaddr_storage* local_addr) {
     SOCKET_TYPE send_socket = INVALID_SOCKET;
     const uint16_t send_port = (peer_addr->ss_family == AF_INET) ?
         ((struct sockaddr_in*)local_addr)->sin_port :
         ((struct sockaddr_in6*)local_addr)->sin6_port;
 
-    for (int i = 0; i < s_ctx_len; i++) {
-        if (s_ctx[i].af == peer_addr->ss_family) {
-            send_socket = s_ctx[i].fd;
-            if (send_port != 0 && htons(s_ctx[i].port) == send_port)
+    for (int i = 0; i < s_ctxs->len; i++) {
+        if (s_ctxs->s_ctx[i].af == peer_addr->ss_family) {
+            send_socket = s_ctxs->s_ctx[i].fd;
+            if (send_port != 0 && htons(s_ctxs->s_ctx[i].port) == send_port)
                 break;
         }
     }
@@ -585,6 +585,7 @@ int picoquic_packet_loop_wait(picoquic_socket_ctx_t* s_ctx,
 #else
 int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
     int nb_sockets,
+    picoquic_socket_ctxs_t* s_ctxs,
     struct sockaddr_storage* addr_from,
     struct sockaddr_storage* addr_dest,
     int* dest_if,
@@ -594,7 +595,7 @@ int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
     int * is_wake_up_event,
     picoquic_network_thread_ctx_t * thread_ctx,
     int * socket_rank,
-    ssize_t (*decode)(picoquic_quic_t* quic, picoquic_socket_ctx_t* s_ctx, size_t s_ctx_len, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr))
+    ssize_t (*decode)(picoquic_quic_t* quic, void* callback_ctx, picoquic_socket_ctxs_t* s_ctx, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr))
 {
     fd_set readfds;
     struct timeval tv;
@@ -681,7 +682,7 @@ int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
 
                         if (decode != NULL) {
                             unsigned char *decoded;
-                            bytes_recv = decode(thread_ctx->quic, s_ctx, nb_sockets, &decoded, (const unsigned char*)buffer, bytes_recv, addr_from, addr_dest);
+                            bytes_recv = decode(thread_ctx->quic, thread_ctx->loop_callback_ctx, s_ctxs, &decoded, (const unsigned char*)buffer, bytes_recv, addr_from, addr_dest);
                             if (bytes_recv > 0) {
                                 memcpy(buffer, decoded, bytes_recv);
                                 free(decoded);
@@ -743,7 +744,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
     void* loop_callback_ctx = thread_ctx->loop_callback_ctx;
     int ret = 0;
     uint64_t current_time = picoquic_get_quic_time(quic);
-    int64_t delay_max = 10000000;
+    int64_t delay_max = param->delay_max == 0 ? 10000000 : param->delay_max;
     struct sockaddr_storage addr_from;
     struct sockaddr_storage addr_to;
     int if_index_to;
@@ -877,7 +878,11 @@ void* picoquic_packet_loop_v3(void* v_ctx)
             &addr_from, &addr_to, &if_index_to, &received_ecn, &received_buffer,
             delta_t, &is_wake_up_event, thread_ctx, &socket_rank);
 #else
-        bytes_recv = picoquic_packet_loop_select(s_ctx, nb_sockets_available,
+        if (!loop_immediate) {
+            ret = loop_callback(quic, picoquic_packet_loop_before_select, loop_callback_ctx, (void*)&s_ctxs);
+        }
+
+        bytes_recv = picoquic_packet_loop_select(s_ctx, nb_sockets_available, &s_ctxs,
             &addr_from,
             &addr_to, &if_index_to, &received_ecn,
             buffer, sizeof(buffer),
@@ -1032,7 +1037,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                         if (param->encode != NULL) {
                             unsigned char* encoded;
                             size_t segment_len = send_msg_size == 0 ? send_length : send_msg_size;
-                            ssize_t encoded_len = param->encode(thread_ctx->quic, last_cnx, s_ctx, nb_sockets, &encoded, (const unsigned char*)send_buffer, send_length, &segment_len, &peer_addr, &local_addr);
+                            ssize_t encoded_len = param->encode(thread_ctx->quic, last_cnx, loop_callback_ctx, &s_ctxs, &encoded, (const unsigned char*)send_buffer, send_length, &segment_len, &peer_addr, &local_addr);
                             if (encoded_len <= 0) {
                                 DBG_PRINTF("Encoding fails, ret=%d\n", encoded_len);
                                 // continue (consider it as packed dropped)
@@ -1047,7 +1052,9 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                             sock_ret = picoquic_sendmsg(send_socket,
                                 (struct sockaddr*)&peer_addr, (struct sockaddr*)&local_addr, if_index,
                                 (const char*)encoded, (int)encoded_len, (int)send_msg_size, &sock_err);
-
+                            if (sock_ret == encoded_len) {
+                                sock_ret = send_length;
+                            }
                             free(encoded);
                         } else {
                             sock_ret = picoquic_sendmsg(send_socket,

@@ -80,6 +80,7 @@ typedef struct st_picoquic_socket_ctxs_t {
  */
 typedef enum {
     picoquic_packet_loop_ready = 0, /* Argument type: packet loop options */
+    picoquic_packet_loop_before_select, /* Argument type size_t*: nb packets received */
     picoquic_packet_loop_after_select, /* Argument type size_t*: nb packets received */
     picoquic_packet_loop_after_receive, /* Argument type size_t*: nb packets received */
     picoquic_packet_loop_after_send, /* Argument type size_t*: nb packets sent */
@@ -143,8 +144,9 @@ typedef struct st_picoquic_packet_loop_param_t {
     int simulate_eio;
     size_t send_length_max;
     int is_client;
-    ssize_t (*decode)(picoquic_quic_t* quic, picoquic_socket_ctx_t* s_ctx, size_t s_ctx_len, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
-    ssize_t (*encode)(picoquic_quic_t* quic, picoquic_cnx_t* cnx, picoquic_socket_ctx_t* s_ctx, size_t s_ctx_len, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
+    ssize_t (*decode)(picoquic_quic_t* quic, void* callback_ctx, picoquic_socket_ctxs_t* s_ctxs, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
+    ssize_t (*encode)(picoquic_quic_t* quic, picoquic_cnx_t* cnx, void* callback_ctx, picoquic_socket_ctxs_t* s_ctxs, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
+    int64_t delay_max;
 } picoquic_packet_loop_param_t;
 
 int picoquic_packet_loop_v2(picoquic_quic_t* quic,
@@ -317,7 +319,7 @@ int picoquic_packet_loop_win(picoquic_quic_t* quic,
     void* loop_callback_ctx);
 #endif
 
-SOCKET_TYPE picoquic_socket_get_send_socket(const picoquic_socket_ctx_t* s_ctx, const size_t s_ctx_len, const struct sockaddr_storage* peer_addr, const struct sockaddr_storage* local_addr);
+SOCKET_TYPE picoquic_socket_get_send_socket(const picoquic_socket_ctxs_t* s_ctxs, const struct sockaddr_storage* peer_addr, const struct sockaddr_storage* local_addr);
 
 /* Following declarations are used for unit tests. */
 void picoquic_packet_loop_close_socket(picoquic_socket_ctx_t* s_ctx);
