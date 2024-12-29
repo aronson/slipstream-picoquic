@@ -70,18 +70,11 @@ typedef struct st_picoquic_socket_ctx_t {
 #endif
 } picoquic_socket_ctx_t;
 
-
-typedef struct st_picoquic_socket_ctxs_t {
-    picoquic_socket_ctx_t* s_ctx;
-    size_t len;
-} picoquic_socket_ctxs_t;
-
 /* The packet loop will call the application back after specific events.
  */
 typedef enum {
     picoquic_packet_loop_ready = 0, /* Argument type: packet loop options */
     picoquic_packet_loop_before_select, /* Argument type size_t*: nb packets received */
-    picoquic_packet_loop_after_select, /* Argument type size_t*: nb packets received */
     picoquic_packet_loop_after_receive, /* Argument type size_t*: nb packets received */
     picoquic_packet_loop_after_send, /* Argument type size_t*: nb packets sent */
     picoquic_packet_loop_port_update, /* argument type struct_sockaddr*: new address for wakeup */
@@ -128,8 +121,6 @@ typedef struct st_picoquic_packet_loop_options_t {
     unsigned int provide_alt_port : 1; /* Used for simulating multipath or migrations. */
 } picoquic_packet_loop_options_t;
 
-void* picoquic_packet_loop_v3(void* v_ctx);
-
 /* Version 2 of packet loop, works in progress.
 * Parameters are set in a struct, for future
 * extensibility.
@@ -144,8 +135,8 @@ typedef struct st_picoquic_packet_loop_param_t {
     int simulate_eio;
     size_t send_length_max;
     int is_client;
-    ssize_t (*decode)(picoquic_quic_t* quic, void* callback_ctx, picoquic_socket_ctxs_t* s_ctxs, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
-    ssize_t (*encode)(picoquic_quic_t* quic, picoquic_cnx_t* cnx, void* callback_ctx, picoquic_socket_ctxs_t* s_ctxs, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
+    ssize_t (*decode)(picoquic_quic_t* quic, void* slot_p, void* callback_ctx, picoquic_socket_ctx_t* s_ctx, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
+    ssize_t (*encode)(picoquic_quic_t* quic, void* slot_p, void* callback_ctx, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
     int64_t delay_max;
 } picoquic_packet_loop_param_t;
 
@@ -196,6 +187,20 @@ typedef struct st_picoquic_network_thread_ctx_t {
     volatile int thread_is_closed;
     int return_code;
 } picoquic_network_thread_ctx_t;
+
+
+int picoquic_packet_loop_select(picoquic_socket_ctx_t* s_ctx,
+                                int nb_sockets,
+                                struct sockaddr_storage* addr_from,
+                                struct sockaddr_storage* addr_dest,
+                                int* dest_if,
+                                unsigned char* received_ecn,
+                                uint8_t* buffer, int buffer_max,
+                                int64_t delta_t,
+                                int* is_wake_up_event,
+                                picoquic_network_thread_ctx_t* thread_ctx,
+                                int* socket_rank);
+
 
 picoquic_network_thread_ctx_t* picoquic_start_network_thread(
     picoquic_quic_t* quic,
@@ -318,8 +323,6 @@ int picoquic_packet_loop_win(picoquic_quic_t* quic,
     picoquic_packet_loop_cb_fn loop_callback,
     void* loop_callback_ctx);
 #endif
-
-SOCKET_TYPE picoquic_socket_get_send_socket(const picoquic_socket_ctxs_t* s_ctxs, const struct sockaddr_storage* peer_addr, const struct sockaddr_storage* local_addr);
 
 /* Following declarations are used for unit tests. */
 void picoquic_packet_loop_close_socket(picoquic_socket_ctx_t* s_ctx);
