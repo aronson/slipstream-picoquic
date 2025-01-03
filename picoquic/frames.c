@@ -4606,7 +4606,8 @@ const uint8_t* picoquic_decode_path_challenge_frame(picoquic_cnx_t* cnx, const u
              * be the unsupported-for-now multipath migration scenario.
              */
             int is_valid = 0;
-#if 0
+            // TODO: figure out what the hell this is
+#if 1
             if (cnx->is_multipath_enabled) {
                 is_valid = 1;
             }
@@ -6214,6 +6215,7 @@ int picoquic_decode_frames(picoquic_cnx_t* cnx, picoquic_path_t * path_x, const 
         }
         else if (epoch != picoquic_epoch_0rtt && epoch != picoquic_epoch_1rtt && first_byte != picoquic_frame_type_padding
             && first_byte != picoquic_frame_type_ping
+            && first_byte != picoquic_frame_type_poll
             && first_byte != picoquic_frame_type_connection_close
             && first_byte != picoquic_frame_type_crypto_hs) {
             picoquic_connection_error(cnx, PICOQUIC_TRANSPORT_PROTOCOL_VIOLATION, first_byte);
@@ -6268,6 +6270,7 @@ int picoquic_decode_frames(picoquic_cnx_t* cnx, picoquic_path_t * path_x, const 
                 ack_needed = 1;
                 break;
             case picoquic_frame_type_ping:
+            case picoquic_frame_type_poll:
                 bytes = picoquic_skip_0len_frame(bytes, bytes_max);
                 ack_needed = 1;
                 break;
@@ -6629,6 +6632,7 @@ int picoquic_skip_frame(const uint8_t* bytes, size_t bytes_maxsize, size_t* cons
             *pure_ack = 0;
             break;
         case picoquic_frame_type_ping:
+        case picoquic_frame_type_poll:
             bytes = picoquic_skip_0len_frame(bytes, bytes_max);
             *pure_ack = 0;
             break;

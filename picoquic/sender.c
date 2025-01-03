@@ -1830,7 +1830,7 @@ int picoquic_prepare_server_address_migration(picoquic_cnx_t* cnx)
                 }
 
                 ret = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&dest_addr, local_addr, 0,
-                    picoquic_get_quic_time(cnx->quic), 1);
+                    picoquic_get_quic_time(cnx->quic), 1, NULL);
             }
         }
     }
@@ -3702,6 +3702,15 @@ int picoquic_prepare_packet_ready(picoquic_cnx_t* cnx, picoquic_path_t* path_x, 
                             is_pure_ack = 0;
                         }
                     }
+
+                    // if we didn't add any frames, we need to check if we need to send a ping frame
+                    if (ret == 0 && cnx->is_poll_requested && length <= header_length) {
+                        if (bytes_next < bytes_max) {
+                            *bytes_next++ = picoquic_frame_type_poll;
+                            length++;
+                            cnx->is_poll_requested = 0;
+                        }
+                    }
                 } /* end of CC */
             } /* End of pacing */
             else if (cnx->priority_limit_for_bypass > 0 && cnx->nb_paths == 1 &&
@@ -4232,7 +4241,7 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
     return path_id;
 }
 
-static int picoquic_select_next_path(picoquic_cnx_t * cnx, uint64_t current_time, uint64_t * next_wake_time,
+int picoquic_select_next_path(picoquic_cnx_t * cnx, uint64_t current_time, uint64_t * next_wake_time,
     struct sockaddr_storage * p_addr_to, struct sockaddr_storage * p_addr_from, int* if_index)
 {
     int path_id = -1;

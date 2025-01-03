@@ -407,7 +407,8 @@ static size_t picoquic_retransmit_needed_packet(picoquic_cnx_t* cnx, picoquic_pa
             if (old_p->send_path != NULL && cnx->is_multipath_enabled) {
                 old_p->send_path->is_ack_lost = 1;
             }
-            picoquic_count_and_notify_loss(cnx, old_p, 2, current_time);
+            // TODO: we don't consider it lost when it's not ack eliciting
+            // picoquic_count_and_notify_loss(cnx, old_p, 2, current_time);
             picoquic_dequeue_retransmit_packet(cnx, pkt_ctx, old_p, 1, 0);
             length = 0;
             *continue_next = 1;

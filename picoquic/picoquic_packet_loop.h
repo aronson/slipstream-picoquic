@@ -135,8 +135,8 @@ typedef struct st_picoquic_packet_loop_param_t {
     int simulate_eio;
     size_t send_length_max;
     int is_client;
-    ssize_t (*decode)(picoquic_quic_t* quic, void* slot_p, void* callback_ctx, picoquic_socket_ctx_t* s_ctx, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
-    ssize_t (*encode)(picoquic_quic_t* quic, void* slot_p, void* callback_ctx, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
+    ssize_t (*decode)(void* slot_p, void* callback_ctx, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
+    ssize_t (*encode)(void* slot_p, void* callback_ctx, unsigned char** dest_buf, const unsigned char* src_buf, size_t src_buf_len, size_t* segment_len, struct sockaddr_storage *peer_addr, struct sockaddr_storage *local_addr);
     int64_t delay_max;
 } picoquic_packet_loop_param_t;
 
@@ -145,6 +145,7 @@ int picoquic_packet_loop_v2(picoquic_quic_t* quic,
     picoquic_packet_loop_cb_fn loop_callback,
     void * loop_callback_ctx);
 
+void* picoquic_packet_loop_v3(void* v_ctx);
 /* Threaded version of packet loop, when running picoquic in a background thread.
 * 
 * Thread is started by calling picoquic_start_network_thread, which

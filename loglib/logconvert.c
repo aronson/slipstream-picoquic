@@ -67,6 +67,8 @@ const char * ftype2str(picoquic_frame_type_enum_t ftype)
         return "max_streams";
     case picoquic_frame_type_ping:
         return "ping";
+    case picoquic_frame_type_poll:
+        return "poll";
     case picoquic_frame_type_data_blocked:
         return "data_blocked";
     case picoquic_frame_type_stream_data_blocked:

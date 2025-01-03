@@ -1223,6 +1223,8 @@ int qlog_packet_frame(bytestream * s, void * ptr)
         break;
     case picoquic_frame_type_ping: 
         break;
+    case picoquic_frame_type_poll:
+        break;
     case picoquic_frame_type_ack:
     case picoquic_frame_type_ack_ecn:
     case picoquic_frame_type_path_ack:

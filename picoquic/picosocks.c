@@ -1135,8 +1135,8 @@ int picoquic_sendmsg(SOCKET_TYPE fd,
     if (bytes_sent <= 0) {
         int last_error = errno;
 #ifndef DISABLE_DEBUG_PRINTF
-        DBG_PRINTF("Could not send packet on UDP socket[AF=%d]= %d!\n",
-            addr_dest->sa_family, last_error);
+        DBG_PRINTF("Could not send packet on UDP socket[AF=%d]= %d! %s\n",
+            addr_dest->sa_family, last_error, strerror(errno));
 #endif
         if (sock_err != NULL) {
             *sock_err = last_error;

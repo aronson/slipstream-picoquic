@@ -249,6 +249,9 @@ char const* textlog_frame_names(uint64_t frame_type)
     case picoquic_frame_type_ping:
         frame_name = "ping";
         break;
+    case picoquic_frame_type_poll:
+        frame_name = "poll";
+        break;
     case picoquic_frame_type_data_blocked:
         frame_name = "data_blocked";
         break;
@@ -1621,7 +1624,8 @@ void picoquic_textlog_frames(FILE* F, uint64_t cnx_id64, const uint8_t* bytes, s
             byte_index += textlog_retire_connection_id_frame(F, bytes + byte_index, length - byte_index, 1);
             break;
         case picoquic_frame_type_padding:
-        case picoquic_frame_type_ping: {
+        case picoquic_frame_type_ping:
+        case picoquic_frame_type_poll: {
             int nb = 0;
 
             while (byte_index < length && bytes[byte_index] == frame_id) {
@@ -2264,7 +2268,7 @@ static void textlog_packet(picoquic_cnx_t* cnx, picoquic_path_t* path_x, int rec
     picoquic_packet_header* ph, const uint8_t* bytes, size_t bytes_max)
 {
     if (cnx->quic->F_log != NULL && picoquic_cnx_is_still_logging(cnx)) {
-        textlog_decrypted_segment(cnx->quic->F_log, 1, 
+        textlog_decrypted_segment(cnx->quic->F_log, 1,
             cnx, receiving, ph, bytes, bytes_max, 0);
     }
 }

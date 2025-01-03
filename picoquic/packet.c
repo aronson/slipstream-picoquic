@@ -2085,22 +2085,23 @@ int picoquic_find_incoming_unique_path(picoquic_cnx_t* cnx, picoquic_packet_head
                 picoquic_store_addr(&cnx->path[path_id]->local_addr, addr_to);
             }
         }
-        /* Else, this might be a NAT rebinding. But we only handle one NAT rebinding at a time.
-         */
-        else if (path_x->nat_peer_addr.ss_family == AF_UNSPEC || !(path_x->challenge_verified == 0 && path_x->challenge_failed == 0)){
-            /* There is no NAT ongoing NAT rebinding, so try this one. */
-            picoquic_store_addr(&cnx->path[path_id]->nat_local_addr, addr_to);
-            picoquic_store_addr(&cnx->path[path_id]->nat_peer_addr, addr_from);
-            path_x->if_index_nat_dest = if_index_to;
-            /* Set the challenges on both the NAT path and the ongoing path */
-            picoquic_set_path_challenge(cnx, path_id, current_time);
-            for (int ichal = 0; ichal < PICOQUIC_CHALLENGE_REPEAT_MAX; ichal++) {
-                path_x->nat_challenge[ichal] = picoquic_public_random_64();
-            }
-            path_x->nat_challenge_time = 0;
-            path_x->nat_challenge_repeat_count = 0;
-            path_x->p_remote_nat_cnxid = picoquic_obtain_stashed_cnxid(cnx, path_x->unique_path_id);
-        }
+        // TODO: do we care about NAT rebinding?
+        // /* Else, this might be a NAT rebinding. But we only handle one NAT rebinding at a time.
+        //  */
+        // else if (path_x->nat_peer_addr.ss_family == AF_UNSPEC || !(path_x->challenge_verified == 0 && path_x->challenge_failed == 0)){
+        //     /* There is no NAT ongoing NAT rebinding, so try this one. */
+        //     picoquic_store_addr(&cnx->path[path_id]->nat_local_addr, addr_to);
+        //     picoquic_store_addr(&cnx->path[path_id]->nat_peer_addr, addr_from);
+        //     path_x->if_index_nat_dest = if_index_to;
+        //     /* Set the challenges on both the NAT path and the ongoing path */
+        //     picoquic_set_path_challenge(cnx, path_id, current_time);
+        //     for (int ichal = 0; ichal < PICOQUIC_CHALLENGE_REPEAT_MAX; ichal++) {
+        //         path_x->nat_challenge[ichal] = picoquic_public_random_64();
+        //     }
+        //     path_x->nat_challenge_time = 0;
+        //     path_x->nat_challenge_repeat_count = 0;
+        //     path_x->p_remote_nat_cnxid = picoquic_obtain_stashed_cnxid(cnx, path_x->unique_path_id);
+        // }
     }
     if (path_id < 0) {
         path_id = 0;

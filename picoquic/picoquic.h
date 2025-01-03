@@ -907,7 +907,7 @@ void picoquic_set_rejected_version(picoquic_cnx_t* cnx, uint32_t rejected_versio
 int picoquic_probe_new_path(picoquic_cnx_t* cnx, const struct sockaddr* addr_peer,
     const struct sockaddr* addr_local, uint64_t current_time);
 int picoquic_probe_new_path_ex(picoquic_cnx_t* cnx, const struct sockaddr* addr_peer,
-    const struct sockaddr* addr_local, int if_index, uint64_t current_time, int to_preferred_address);
+    const struct sockaddr* addr_local, int if_index, uint64_t current_time, int to_preferred_address, int* path_id_p);
 void picoquic_enable_path_callbacks(picoquic_cnx_t* cnx, int are_enabled);
 void picoquic_enable_path_callbacks_default(picoquic_quic_t* quic, int are_enabled);
 int picoquic_set_app_path_ctx(picoquic_cnx_t* cnx, uint64_t unique_path_id, void * app_path_ctx);
@@ -1085,6 +1085,9 @@ int picoquic_incoming_packet_ex(
     unsigned char received_ecn,
     picoquic_cnx_t** first_cnx,
     uint64_t current_time);
+
+
+int picoquic_select_next_path(picoquic_cnx_t * cnx, uint64_t current_time, uint64_t * next_wake_time, struct sockaddr_storage * p_addr_to, struct sockaddr_storage * p_addr_from, int* if_index);
 
 /* Applications must regularly poll the "next packet" API to obtain the
  * next packet that will be set over the network. The API for that is

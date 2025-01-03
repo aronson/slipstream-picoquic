@@ -569,6 +569,7 @@ void picoquic_binlog_frames(FILE * f, const uint8_t* bytes, size_t length)
             break;
         case picoquic_frame_type_padding:
         case picoquic_frame_type_ping:
+        case picoquic_frame_type_poll:
             bytes = picoquic_log_padding(f, bytes, bytes_max);
             break;
         case picoquic_frame_type_reset_stream:

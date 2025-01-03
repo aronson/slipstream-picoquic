@@ -2096,7 +2096,7 @@ int picoquic_assign_peer_cnxid_to_path(picoquic_cnx_t* cnx, int path_index)
 
 /* Create a new path in order to trigger a migration */
 int picoquic_probe_new_path_ex(picoquic_cnx_t* cnx, const struct sockaddr* addr_peer,
-    const struct sockaddr* addr_local, int if_index, uint64_t current_time, int to_preferred_address)
+    const struct sockaddr* addr_local, int if_index, uint64_t current_time, int to_preferred_address, int* path_id_p)
 {
     int ret = 0;
     int partial_match_path = -1;
@@ -2143,6 +2143,10 @@ int picoquic_probe_new_path_ex(picoquic_cnx_t* cnx, const struct sockaddr* addr_
         }
     }
 
+    if (path_id_p != NULL) {
+        *path_id_p = path_id;
+    }
+
     return ret;
 }
 
@@ -2185,7 +2189,7 @@ int picoquic_set_app_path_ctx(picoquic_cnx_t* cnx, uint64_t unique_path_id, void
 int picoquic_probe_new_path(picoquic_cnx_t* cnx, const struct sockaddr* addr_peer,
     const struct sockaddr* addr_local, uint64_t current_time)
 {
-    return picoquic_probe_new_path_ex(cnx, addr_peer, addr_local, 0, current_time, 0);
+    return picoquic_probe_new_path_ex(cnx, addr_peer, addr_local, 0, current_time, 0, NULL);
 }
 
 int picoquic_demote_local_cnxid_list(picoquic_cnx_t* cnx, uint64_t unique_path_id,

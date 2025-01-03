@@ -124,6 +124,7 @@ extern "C" {
 typedef enum {
     picoquic_frame_type_padding = 0,
     picoquic_frame_type_ping = 1,
+    picoquic_frame_type_poll = 0x20,
     picoquic_frame_type_ack = 0x02,
     picoquic_frame_type_ack_ecn = 0x03,
     picoquic_frame_type_reset_stream = 0x04,
@@ -1313,7 +1314,10 @@ typedef struct st_picoquic_cnx_t {
     unsigned int is_forced_probe_up_required : 1; /* application wants "probe up" if CC requests it */
     unsigned int is_address_discovery_provider : 1; /* send the address discovery extension */
     unsigned int is_address_discovery_receiver : 1; /* receive the address discovery extension */
-    
+
+    /* Requesting polls */
+    unsigned int is_poll_requested : 1; /* Whether the application requested to poll */
+
     /* PMTUD policy */
     picoquic_pmtud_policy_enum pmtud_policy;
     /* Spin bit policy */
