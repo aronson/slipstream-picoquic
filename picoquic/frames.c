@@ -6270,9 +6270,11 @@ int picoquic_decode_frames(picoquic_cnx_t* cnx, picoquic_path_t * path_x, const 
                 ack_needed = 1;
                 break;
             case picoquic_frame_type_ping:
-            case picoquic_frame_type_poll:
                 bytes = picoquic_skip_0len_frame(bytes, bytes_max);
                 ack_needed = 1;
+                break;
+            case picoquic_frame_type_poll:
+                bytes = picoquic_skip_0len_frame(bytes, bytes_max);
                 break;
             case picoquic_frame_type_data_blocked:
                 bytes = picoquic_decode_blocked_frame(cnx, bytes, bytes_max);
@@ -6632,9 +6634,11 @@ int picoquic_skip_frame(const uint8_t* bytes, size_t bytes_maxsize, size_t* cons
             *pure_ack = 0;
             break;
         case picoquic_frame_type_ping:
-        case picoquic_frame_type_poll:
             bytes = picoquic_skip_0len_frame(bytes, bytes_max);
             *pure_ack = 0;
+            break;
+        case picoquic_frame_type_poll:
+            bytes = picoquic_skip_0len_frame(bytes, bytes_max);
             break;
         case picoquic_frame_type_data_blocked:
             bytes = picoquic_frames_varint_skip(bytes+1, bytes_max);
