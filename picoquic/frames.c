@@ -3726,7 +3726,8 @@ const uint8_t* picoquic_decode_ack_frame(picoquic_cnx_t* cnx, const uint8_t* byt
                     break;
                 }
 
-                if (range > 0) {
+                // disable spurious retransmission detection for 1-RTT packets
+                if (cnx->cnx_state != picoquic_state_ready && range > 0) {
                     p_retransmitted_previous = picoquic_check_spurious_retransmission(cnx, pc, pkt_ctx,
                         largest + 1 - range, largest, current_time, time_stamp, p_retransmitted_previous, packet_data);
                 }
