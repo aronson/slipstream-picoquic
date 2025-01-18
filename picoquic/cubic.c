@@ -56,9 +56,9 @@ static void picoquic_cubic_reset(picoquic_cubic_state_t* cubic_state, picoquic_p
     cubic_state->beta = 7.0 / 8.0;
     cubic_state->start_of_epoch = current_time;
     cubic_state->previous_start_of_epoch = 0;
-    cubic_state->W_reno = PICOQUIC_CWIN_INITIAL;
+    cubic_state->W_reno = PICOQUIC_PATH_CWIN_INITIAL;
     cubic_state->recovery_sequence = 0;
-    path_x->cwin = PICOQUIC_CWIN_INITIAL;
+    path_x->cwin = PICOQUIC_PATH_CWIN_INITIAL;
 }
 
 static void picoquic_cubic_init(picoquic_cnx_t * cnx, picoquic_path_t* path_x, uint64_t current_time)
@@ -145,7 +145,7 @@ static void picoquic_cubic_enter_recovery(picoquic_cnx_t * cnx,
     }
     /* Compute the new ssthresh */
     cubic_state->ssthresh = (uint64_t)(cubic_state->W_max * cubic_state->beta*(double)path_x->send_mtu);
-    if (cubic_state->ssthresh < PICOQUIC_CWIN_MINIMUM) {
+    if (cubic_state->ssthresh < PICOQUIC_PATH_CWIN_MINIMUM) {
         /* If things are that bad, fall back to slow start */
 
         cubic_state->alg_state = picoquic_cubic_alg_slow_start;
@@ -153,12 +153,12 @@ static void picoquic_cubic_enter_recovery(picoquic_cnx_t * cnx,
         path_x->is_ssthresh_initialized = 0;
         cubic_state->previous_start_of_epoch = cubic_state->start_of_epoch;
         cubic_state->start_of_epoch = current_time;
-        cubic_state->W_reno = PICOQUIC_CWIN_MINIMUM;
-        path_x->cwin = PICOQUIC_CWIN_MINIMUM;
+        cubic_state->W_reno = PICOQUIC_PATH_CWIN_MINIMUM;
+        path_x->cwin = PICOQUIC_PATH_CWIN_MINIMUM;
     }
     else {
         if (notification == picoquic_congestion_notification_timeout) {
-            path_x->cwin = PICOQUIC_CWIN_MINIMUM;
+            path_x->cwin = PICOQUIC_PATH_CWIN_MINIMUM;
             cubic_state->previous_start_of_epoch = cubic_state->start_of_epoch;
             cubic_state->start_of_epoch = current_time;
             cubic_state->alg_state = picoquic_cubic_alg_slow_start;
@@ -506,10 +506,10 @@ static void picoquic_dcubic_notify(
                     uint64_t min_cwnd;
 
                     if (path_x->rtt_min > PICOQUIC_TARGET_SATELLITE_RTT) {
-                        min_cwnd = (uint64_t)((double)PICOQUIC_CWIN_INITIAL * (double)PICOQUIC_TARGET_SATELLITE_RTT / (double)PICOQUIC_TARGET_RENO_RTT);
+                        min_cwnd = (uint64_t)((double)PICOQUIC_PATH_CWIN_INITIAL * (double)PICOQUIC_TARGET_SATELLITE_RTT / (double)PICOQUIC_TARGET_RENO_RTT);
                     }
                     else {
-                        min_cwnd = (uint64_t)((double)PICOQUIC_CWIN_INITIAL * (double)path_x->rtt_min / (double)PICOQUIC_TARGET_RENO_RTT);
+                        min_cwnd = (uint64_t)((double)PICOQUIC_PATH_CWIN_INITIAL * (double)path_x->rtt_min / (double)PICOQUIC_TARGET_RENO_RTT);
                     }
 
                     if (min_cwnd > path_x->cwin) {
@@ -569,10 +569,10 @@ static void picoquic_dcubic_notify(
                     uint64_t min_cwnd;
 
                     if (path_x->rtt_min > PICOQUIC_TARGET_SATELLITE_RTT) {
-                        min_cwnd = (uint64_t)((double)PICOQUIC_CWIN_INITIAL * (double)PICOQUIC_TARGET_SATELLITE_RTT / (double)PICOQUIC_TARGET_RENO_RTT);
+                        min_cwnd = (uint64_t)((double)PICOQUIC_PATH_CWIN_INITIAL * (double)PICOQUIC_TARGET_SATELLITE_RTT / (double)PICOQUIC_TARGET_RENO_RTT);
                     }
                     else {
-                        min_cwnd = (uint64_t)((double)PICOQUIC_CWIN_INITIAL * (double)path_x->rtt_min / (double)PICOQUIC_TARGET_RENO_RTT);
+                        min_cwnd = (uint64_t)((double)PICOQUIC_PATH_CWIN_INITIAL * (double)path_x->rtt_min / (double)PICOQUIC_TARGET_RENO_RTT);
                     }
 
                     if (min_cwnd > path_x->cwin) {
