@@ -4013,7 +4013,10 @@ int picoquic_is_ack_needed_in_ctx(picoquic_cnx_t* cnx, picoquic_ack_context_t* a
     int ret = 0;
 
     if (ack_ctx->act[is_opportunistic].ack_needed) {
-        if (ack_ctx->act[is_opportunistic].is_immediate_ack_required) {
+        if (cnx->no_ack_delay) {
+            ret = 1;
+        }
+        else if (ack_ctx->act[is_opportunistic].is_immediate_ack_required) {
             ret = 1;
         }
         else if (pc != picoquic_packet_context_application || ack_ctx->act[is_opportunistic].ack_after_fin) {

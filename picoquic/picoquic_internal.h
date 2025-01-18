@@ -61,7 +61,7 @@ extern "C" {
 #define PICOQUIC_ACK_DELAY_MAX_DEFAULT 25000ull /* 25 ms, per protocol spec */
 #define PICOQUIC_ACK_DELAY_MIN 1000ull /* 1 ms */
 #define PICOQUIC_ACK_DELAY_MIN_MAX_VALUE 0xFFFFFFull /* max value that can be negotiated by peers */
-#define PICOQUIC_RACK_DELAY 10000ull /* 10 ms */
+#define PICOQUIC_RACK_DELAY 100000ull /* 100 ms */
 #define PICOQUIC_MAX_ACK_DELAY_MAX_MS 0x4000ull /* 2<14 ms */
 #define PICOQUIC_TOKEN_DELAY_LONG (24*60*60*1000000ull) /* 24 hours */
 #define PICOQUIC_TOKEN_DELAY_SHORT (2*60*1000000ull) /* 2 minutes */
@@ -86,7 +86,9 @@ extern "C" {
 #define PICOQUIC_MICROSEC_STATELESS_RESET_INTERVAL_DEFAULT 100000ull /* max 10 stateless reset by second by default */
 
 #define PICOQUIC_CWIN_INITIAL (10 * PICOQUIC_MAX_PACKET_SIZE)
+#define PICOQUIC_PATH_CWIN_INITIAL (10 * path_x->send_mtu)
 #define PICOQUIC_CWIN_MINIMUM (2 * PICOQUIC_MAX_PACKET_SIZE)
+#define PICOQUIC_PATH_CWIN_MINIMUM (10 * path_x->send_mtu)
 
 #define PICOQUIC_PRIORITY_BYPASS_MAX_RATE 125000
 #define PICOQUIC_PRIORITY_BYPASS_QUANTUM 2560
@@ -1317,6 +1319,9 @@ typedef struct st_picoquic_cnx_t {
 
     /* Requesting polls */
     unsigned int is_poll_requested : 1; /* Whether the application requested to poll */
+
+    /* Disable ack delay */
+    unsigned int no_ack_delay : 1; /* Whether the ack delay is disabled, no impact on transport parameters */
 
     /* PMTUD policy */
     picoquic_pmtud_policy_enum pmtud_policy;
