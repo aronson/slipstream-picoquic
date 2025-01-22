@@ -52,8 +52,8 @@ static void picoquic_cubic_reset(picoquic_cubic_state_t* cubic_state, picoquic_p
     cubic_state->ssthresh = UINT64_MAX;
     cubic_state->W_last_max = (double)cubic_state->ssthresh / (double)path_x->send_mtu;
     cubic_state->W_max = cubic_state->W_last_max;
-    cubic_state->C = 0.4;
-    cubic_state->beta = 7.0 / 8.0;
+    cubic_state->C = 0.6;
+    cubic_state->beta = 19.0 / 20.0;
     cubic_state->start_of_epoch = current_time;
     cubic_state->previous_start_of_epoch = 0;
     cubic_state->W_reno = PICOQUIC_PATH_CWIN_INITIAL;

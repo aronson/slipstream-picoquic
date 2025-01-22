@@ -559,8 +559,8 @@ static int picoquic_is_packet_probably_lost(picoquic_cnx_t* cnx,
             &old_p->send_path->pkt_ctx : &cnx->pkt_ctx[old_p->pc];
         delta_seq = pkt_ctx->highest_acknowledged - old_p->sequence_number;
 
-        int seq_gap = 3;
-        if (cnx->ack_gap_local > 3) {
+        int seq_gap = 10;
+        if (cnx->ack_gap_local > 10) {
             if (cnx->ack_gap_local > 20) {
                 seq_gap = 20;
             } else {

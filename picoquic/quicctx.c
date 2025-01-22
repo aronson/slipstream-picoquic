@@ -3893,7 +3893,7 @@ picoquic_cnx_t* picoquic_create_cnx(picoquic_quic_t* quic,
         }
         
         cnx->ack_frequency_sequence_local = UINT64_MAX;
-        cnx->ack_gap_local = 2;
+        cnx->ack_gap_local = 10;
         cnx->ack_frequency_delay_local = PICOQUIC_ACK_DELAY_MAX_DEFAULT;
         cnx->ack_frequency_sequence_remote = UINT64_MAX;
         cnx->ack_gap_remote = 2;
