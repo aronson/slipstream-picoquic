@@ -1413,7 +1413,7 @@ static int tls_api_server_departure(picoquic_test_tls_api_ctx_t* test_ctx,
 
     test_ctx->server_endpoint.last_send_time = simulated_time;
 
-    ret = picoquic_prepare_packet_ex(test_ctx->cnx_server, simulated_time,
+    ret = picoquic_prepare_packet_ex(test_ctx->cnx_server, -1, simulated_time,
         test_ctx->send_buffer, test_ctx->send_buffer_size, send_length,
         addr_to, addr_from, NULL, p_segment_size);
     test_ctx->server_endpoint.next_time_ready = simulated_time +
@@ -1476,7 +1476,7 @@ static int tls_api_client_departure(picoquic_test_tls_api_ctx_t* test_ctx,
         tls_api_prepare_coalesce_test(test_ctx, &coalesced_length, send_buffer_size);
     }
 
-    ret = picoquic_prepare_packet_ex(test_ctx->cnx_client, simulated_time,
+    ret = picoquic_prepare_packet_ex(test_ctx->cnx_client, -1, simulated_time,
         test_ctx->send_buffer + coalesced_length, send_buffer_size - coalesced_length, send_length,
         addr_to, addr_from, NULL, p_segment_size);
 
@@ -11928,12 +11928,13 @@ int port_blocked_test_one(picoquic_quic_t * quic,
     struct sockaddr_storage s_from;
     int if_index = 0;
     picoquic_cnx_t* first_cnx = NULL;
+    int path_id = -1;
     picoquic_cnx_t* last_cnx = NULL;
     size_t send_length = 0;
     picoquic_connection_id_t log_cid = { 0 };
 
 
-    int ret = picoquic_incoming_packet_ex(quic, packet, packet_length, addr_from, addr_to, 0, 0, &first_cnx, current_time);
+    int ret = picoquic_incoming_packet_ex(quic, packet, packet_length, addr_from, addr_to, 0, 0, &first_cnx, &path_id, current_time);
 
     if (ret == 0) {
         ret = picoquic_prepare_next_packet_ex(quic, current_time, send_buffer, PICOQUIC_MAX_PACKET_SIZE, &send_length, &s_to, &s_from, &if_index, &log_cid, &last_cnx, NULL);

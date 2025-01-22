@@ -730,6 +730,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
     int nb_sockets = 0;
     int nb_sockets_available = 0;
     picoquic_cnx_t* last_cnx = NULL;
+    int last_path_id = -1;
     int loop_immediate = 0;
     unsigned int nb_loop_immediate = 0;
     picoquic_packet_loop_options_t options = { 0 };
@@ -878,7 +879,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                         recv_length, (struct sockaddr*)&addr_from,
                         (struct sockaddr*)&addr_to,
                         s_ctx[socket_rank].dest_if,
-                        s_ctx[socket_rank].received_ecn, &last_cnx, current_time);
+                        s_ctx[socket_rank].received_ecn, &last_cnx, &last_path_id, current_time);
                     recv_bytes += recv_length;
                 }
                 if (ret == 0) {
@@ -889,7 +890,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                 ret = picoquic_incoming_packet_ex(quic, received_buffer,
                     (size_t)bytes_recv, (struct sockaddr*)&addr_from,
                     (struct sockaddr*)&addr_to, if_index_to, received_ecn,
-                    &last_cnx, current_time);
+                    &last_cnx, &last_path_id, current_time);
 #endif
 
 

@@ -883,6 +883,7 @@ int packet_initial_dec_one(
     struct sockaddr_in test_addr_s;
     picoquic_quic_t* qserver = NULL;
     picoquic_cnx_t* new_cnx = NULL;
+    int path_id = -1;
     char test_server_cert_file[512];
     char test_server_key_file[512];
     char test_server_cert_store_file[512];
@@ -916,7 +917,7 @@ int packet_initial_dec_one(
     if (ret == 0) {
         ret = picoquic_incoming_packet_ex(qserver, bytes, packet_length,
             (struct sockaddr*)&test_addr_c, (struct sockaddr*)&test_addr_s, 0,
-            0, &new_cnx, 0);
+            0, &new_cnx, &path_id, 0);
         if (ret != 0) {
             DBG_PRINTF("Incoming returns ret=0x%x", ret);
         }

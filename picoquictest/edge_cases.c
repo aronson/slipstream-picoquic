@@ -792,7 +792,7 @@ int idle_server_test_one(uint8_t test_id, uint64_t client_timeout, uint64_t hand
             struct sockaddr_storage addr_to;
             struct sockaddr_storage addr_from;
 
-            ret = picoquic_prepare_packet_ex(test_ctx->cnx_client, simulated_time,
+            ret = picoquic_prepare_packet_ex(test_ctx->cnx_client, -1, simulated_time,
                 send_buffer, sizeof(send_buffer), &send_length,
                 &addr_to, &addr_from, 0, NULL);
             if (ret != 0) {
@@ -1251,6 +1251,7 @@ int initial_pto_prepare(picoquic_test_tls_api_ctx_t* test_ctx, uint64_t* p_simul
     uint8_t buf[PICOQUIC_MAX_PACKET_SIZE];
     struct sockaddr_storage addr_to;
     struct sockaddr_storage addr_from;
+    int path_id = -1;
 
     ret = picoquic_prepare_packet(test_ctx->cnx_client, *p_simulated_time,
         buf, PICOQUIC_MAX_PACKET_SIZE, length,
@@ -1261,7 +1262,7 @@ int initial_pto_prepare(picoquic_test_tls_api_ctx_t* test_ctx, uint64_t* p_simul
          * crypto context created */
         ret = picoquic_incoming_packet_ex(test_ctx->qserver, buf, *length, 
             (struct sockaddr*)&addr_from, (struct sockaddr*)&addr_to, 0, 0,
-            &test_ctx->cnx_server, *p_simulated_time);
+            &test_ctx->cnx_server, &path_id, *p_simulated_time);
         if (ret == 0 && test_ctx->cnx_server == NULL) {
             ret = -1;
         }
@@ -1334,9 +1335,10 @@ int initial_pto_ack(picoquic_test_tls_api_ctx_t* test_ctx, uint64_t* p_simulated
     }
     else {
         picoquic_cnx_t* last_cnx = NULL;
+        int path_id = -1;
         ret = picoquic_incoming_packet_ex(test_ctx->qclient, send_buffer, send_length,
             (struct sockaddr*)&test_ctx->server_addr, (struct sockaddr*)&test_ctx->client_addr, 0, 0,
-            &last_cnx, *p_simulated_time);
+            &last_cnx, &path_id, *p_simulated_time);
     }
     return ret;
 }

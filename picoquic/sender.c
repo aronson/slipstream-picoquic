@@ -4365,7 +4365,7 @@ int picoquic_program_app_wake_time(picoquic_cnx_t* cnx, uint64_t* next_wake_time
 }
 
 /* Prepare next packet to send, or nothing.. */
-int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
+int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx, int path_id_request,
     uint64_t current_time, uint8_t* send_buffer, size_t send_buffer_max, size_t* send_length,
     struct sockaddr_storage * p_addr_to, struct sockaddr_storage * p_addr_from, int* if_index, size_t* send_msg_size)
 {
@@ -4412,6 +4412,9 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
 
         /* Select the next path, and the corresponding addresses */
         path_id = picoquic_select_next_path(cnx, current_time, &next_wake_time, p_addr_to, p_addr_from, if_index);
+        if (path_id_request != -1) {
+            path_id = path_id_request;
+        }
 
         /* Send the available packets */
         if (send_msg_size != NULL) {
@@ -4580,7 +4583,7 @@ int picoquic_prepare_packet(picoquic_cnx_t* cnx,
     uint64_t current_time, uint8_t* send_buffer, size_t send_buffer_max, size_t* send_length,
     struct sockaddr_storage* p_addr_to, struct sockaddr_storage* p_addr_from, int* if_index)
 {
-    return picoquic_prepare_packet_ex(cnx, current_time, send_buffer, send_buffer_max, send_length,
+    return picoquic_prepare_packet_ex(cnx, -1, current_time, send_buffer, send_buffer_max, send_length,
         p_addr_to, p_addr_from, if_index, NULL);
 }
 
@@ -4660,7 +4663,7 @@ int picoquic_prepare_next_packet_ex(picoquic_quic_t* quic,
             *send_length = 0;
         }
         else {
-            ret = picoquic_prepare_packet_ex(cnx, current_time, send_buffer, send_buffer_max, send_length, p_addr_to, p_addr_from, 
+            ret = picoquic_prepare_packet_ex(cnx, -1, current_time, send_buffer, send_buffer_max, send_length, p_addr_to, p_addr_from,
                 if_index, send_msg_size);
             if (log_cid != NULL) {
                 *log_cid = cnx->initial_cnxid;

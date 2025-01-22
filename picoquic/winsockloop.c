@@ -415,6 +415,7 @@ int picoquic_packet_loop_win(picoquic_quic_t* quic,
     int testing_migration = 0; /* Hook for the migration test */
     uint16_t next_port = 0; /* Data for the migration test */
     picoquic_cnx_t* last_cnx = NULL;
+    int path_id = -1;
     picoquic_sendmsg_ctx_t* send_ctx_first = NULL;
     picoquic_sendmsg_ctx_t* send_ctx_last = NULL;
     picoquic_packet_loop_options_t options = { 0 };
@@ -540,7 +541,7 @@ int picoquic_packet_loop_win(picoquic_quic_t* quic,
                                 ret = picoquic_incoming_packet_ex(quic, sock_ctx[socket_rank]->recv_buffer + recv_bytes,
                                     recv_length, (struct sockaddr*)&sock_ctx[socket_rank]->addr_from,
                                     (struct sockaddr*)&sock_ctx[socket_rank]->addr_dest, sock_ctx[socket_rank]->dest_if,
-                                    sock_ctx[socket_rank]->received_ecn, &last_cnx, current_time);
+                                    sock_ctx[socket_rank]->received_ecn, &last_cnx, &path_id, current_time);
                                 recv_bytes += recv_length;
                             }
                         }

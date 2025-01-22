@@ -1374,7 +1374,7 @@ void picoquic_queue_immediate_close(picoquic_cnx_t* cnx, uint64_t current_time)
     picoquic_stateless_packet_t* sp = picoquic_create_stateless_packet(cnx->quic);
 
     if (sp != NULL) {
-        int ret = picoquic_prepare_packet_ex(cnx, current_time, sp->bytes, PICOQUIC_MAX_PACKET_SIZE,
+        int ret = picoquic_prepare_packet_ex(cnx, -1, current_time, sp->bytes, PICOQUIC_MAX_PACKET_SIZE,
             &sp->length, &sp->addr_to, &sp->addr_local, &sp->if_index_local, NULL);
         if (ret == 0 && sp->length > 0) {
             picoquic_queue_stateless_packet(cnx->quic, sp);
@@ -2462,7 +2462,8 @@ int picoquic_incoming_segment(
     uint64_t current_time,
     uint64_t receive_time,
     picoquic_connection_id_t* previous_dest_id,
-    picoquic_cnx_t** first_cnx)
+    picoquic_cnx_t** first_cnx,
+    int* path_id)
 {
     int ret = 0;
     picoquic_cnx_t* cnx = NULL;
@@ -2470,7 +2471,6 @@ int picoquic_incoming_segment(
     int new_context_created = 0;
     int is_first_segment = 0;
     int is_buffered = 0;
-    int path_id = -1;
     int path_is_not_allocated = 0;
     uint8_t* bytes = NULL;
     picoquic_stream_data_node_t* decrypted_data = picoquic_stream_data_node_alloc(quic);
@@ -2534,18 +2534,18 @@ int picoquic_incoming_segment(
             }
             else {
                 /* Find the arrival path and update its state */
-                ret = picoquic_find_incoming_path(cnx, &ph, addr_from, addr_to, if_index_to, current_time, &path_id, &path_is_not_allocated);
+                ret = picoquic_find_incoming_path(cnx, &ph, addr_from, addr_to, if_index_to, current_time, path_id, &path_is_not_allocated);
             }
         }
 
         if (ret == 0) {
             /* TODO: identify incoming path */
-            picoquic_log_packet(cnx, (path_id < 0)?NULL:cnx->path[path_id], 1, current_time, &ph, bytes, *consumed);
+            picoquic_log_packet(cnx, (*path_id < 0)?NULL:cnx->path[*path_id], 1, current_time, &ph, bytes, *consumed);
         }
         else if (is_buffered) {
-            picoquic_log_buffered_packet(cnx, (path_id < 0) ? NULL : cnx->path[path_id], ph.ptype, current_time);
+            picoquic_log_buffered_packet(cnx, (*path_id < 0) ? NULL : cnx->path[*path_id], ph.ptype, current_time);
         } else {
-            picoquic_log_dropped_packet(cnx, (path_id < 0) ? NULL : cnx->path[path_id], &ph, length, ret, bytes, current_time);
+            picoquic_log_dropped_packet(cnx, (*path_id < 0) ? NULL : cnx->path[*path_id], &ph, length, ret, bytes, current_time);
         }
     }
 
@@ -2666,7 +2666,7 @@ int picoquic_incoming_segment(
                 }
                 break;
             case picoquic_packet_1rtt_protected:
-                ret = picoquic_incoming_1rtt(cnx, path_id, bytes, decrypted_data,
+                ret = picoquic_incoming_1rtt(cnx, *path_id, bytes, decrypted_data,
                     &ph, addr_from, addr_to, if_index_to, received_ecn,
                     path_is_not_allocated, current_time);
                 break;
@@ -2766,6 +2766,7 @@ int picoquic_incoming_packet_ex(
     int if_index_to,
     unsigned char received_ecn,
     picoquic_cnx_t** first_cnx,
+    int* first_path_id,
     uint64_t current_time)
 {
     size_t consumed_index = 0;
@@ -2778,7 +2779,7 @@ int picoquic_incoming_packet_ex(
         ret = picoquic_incoming_segment(quic, bytes + consumed_index, 
             packet_length - consumed_index, packet_length,
             &consumed, addr_from, addr_to, if_index_to, received_ecn, current_time, current_time,
-            &previous_destid, first_cnx);
+            &previous_destid, first_cnx, first_path_id);
 
         if (ret == 0) {
             consumed_index += consumed;
@@ -2810,9 +2811,10 @@ int picoquic_incoming_packet(
     uint64_t current_time)
 {
     picoquic_cnx_t* first_cnx = NULL;
+    int path_id = 0;
 
     int ret = picoquic_incoming_packet_ex(quic, bytes, packet_length, addr_from, addr_to,
-        if_index_to, received_ecn, &first_cnx, current_time);
+        if_index_to, received_ecn, &first_cnx, &path_id, current_time);
     return ret;
 }
 
@@ -2847,6 +2849,7 @@ void picoquic_process_sooner_packets(picoquic_cnx_t* cnx, uint64_t current_time)
             int ret = 0;
             picoquic_connection_id_t previous_destid = picoquic_null_connection_id;
             picoquic_cnx_t* first_cnx = NULL;
+            int path_id = -1;
 
 
             while (consumed_index < packet->length) {
@@ -2855,7 +2858,7 @@ void picoquic_process_sooner_packets(picoquic_cnx_t* cnx, uint64_t current_time)
                 ret = picoquic_incoming_segment(cnx->quic, packet->bytes + consumed_index,
                     packet->length - consumed_index, packet->length,
                     &consumed, (struct sockaddr*) & packet->addr_to, (struct sockaddr*) & packet->addr_local, packet->if_index_local,
-                    packet->received_ecn, current_time, packet->receive_time, &previous_destid, &first_cnx);
+                    packet->received_ecn, current_time, packet->receive_time, &previous_destid, &first_cnx, &path_id);
 
                 if (ret == 0 && consumed > 0) {
                     consumed_index += consumed;
