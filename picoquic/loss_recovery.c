@@ -24,6 +24,7 @@
 #include "tls_api.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 /* Packet loss recovery logic. This is an implementation of the RACK
  * algorithm, with two key functions:
@@ -559,22 +560,7 @@ static int picoquic_is_packet_probably_lost(picoquic_cnx_t* cnx,
             &old_p->send_path->pkt_ctx : &cnx->pkt_ctx[old_p->pc];
         delta_seq = pkt_ctx->highest_acknowledged - old_p->sequence_number;
 
-        int seq_gap = 10;
-        if (cnx->ack_gap_local > 10) {
-            if (cnx->ack_gap_local > 20) {
-                seq_gap = 20;
-            } else {
-                seq_gap = cnx->ack_gap_local;
-            }
-        }
-        if (delta_seq >= seq_gap) {
-            /* Last acknowledged packet is ways ahead. That means this packet
-            * is most probably lost.
-            */
-            retransmit_time = current_time;
-            is_probably_lost = 1;
-        }
-        else if (delta_seq > 0) {
+        if (delta_seq > 0) {
             /* Set a timer relative to that last packet */
             int64_t rack_delay = (old_p->send_path->smoothed_rtt >> 2);
             delta_sent = pkt_ctx->latest_time_acknowledged - old_p->send_time;
