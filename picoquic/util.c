@@ -32,6 +32,7 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <pthread.h>
+#include <signal.h>
 #include <unistd.h>
 #endif
 #include "picoquic_internal.h"

@@ -1437,6 +1437,7 @@ int frame_ackack_error_packet(picoquic_quic_t* qclient, struct sockaddr* saddr, 
         int is_spurious = 0;
         size_t len;
         picoquic_state_enum previous_state;
+        picoquic_packet_data_t packet_data = { 0 };
 
         parse_test_packet_cnx_fix(cnx, simulated_time, epoch, mpath);
         frame_init_test_packet(p, cnx, epoch, simulated_time);
@@ -1444,7 +1445,7 @@ int frame_ackack_error_packet(picoquic_quic_t* qclient, struct sockaddr* saddr, 
         p->length = p->offset + len;
 
         previous_state = cnx->cnx_state;
-        picoquic_process_ack_of_frames(cnx, p, is_spurious, simulated_time);
+        picoquic_process_ack_of_frames(cnx, p, &packet_data, is_spurious, simulated_time);
         *disconnected = (cnx->cnx_state != previous_state);
 
         picoquic_delete_cnx(cnx);

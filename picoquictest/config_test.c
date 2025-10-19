@@ -63,6 +63,8 @@ static picoquic_quic_config_t param1 = {
     4433, /* int server_port; */
     1, /* int dest_if; */
     1536, /* int mtu_max; */
+    0, /* int initial_send_mtu_ipv4; */
+    0, /* int initial_send_mtu_ipv6; */
     -1, /* int cnx_id_length; */
     0, /* int idle_timeout */
     655360, /* Socket buffer size */
@@ -150,6 +152,8 @@ static picoquic_quic_config_t param2 = {
     0, /* int server_port; */
     0, /* int dest_if; */
     0, /* int mtu_max; */
+    0, /* int initial_send_mtu_ipv4; */
+    0, /* int initial_send_mtu_ipv6; */
     5, /* int cnx_id_length; */
     1234567, /* int idle_timeout */
     0, /* socket_buffer_size */
