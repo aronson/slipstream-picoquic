@@ -1086,9 +1086,9 @@ void picoquic_delete_thread(picoquic_thread_t * thread)
 #else
     if (pthread_join(*thread, NULL) != 0) {
 # ifdef _POSIX_THREAD_PROCESS_SHARED
-        pthread_kill(*thread, SIGTERM);
-# else
         (void)pthread_cancel(*thread);
+# else
+        pthread_kill(*thread, SIGTERM);
 # endif
     }
 #endif
